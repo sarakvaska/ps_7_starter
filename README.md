@@ -10,6 +10,8 @@ This project provides some guidance on problem set 7, starting with some work we
 
 * Create a process_data.R file in which we will save code that deals with all our data.
 
+* Get Upshot Data
+
 * Get rid of Senate/Governor races from Upshot.
 
 * Keep only those polls from Wave 3.
