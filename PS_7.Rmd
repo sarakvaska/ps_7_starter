@@ -1,0 +1,223 @@
+---
+title: "ps_7"
+author: "Sara Kvaska"
+date: "11/20/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(stringr)
+library(fs)
+library(dplyr)
+library(tools)
+library(tidyr)
+library(janitor)
+download.file(url = "https://goo.gl/ZRCBda",
+              destfile = "master.zip",
+              quiet = TRUE,
+              mode = "wb")
+unzip("master.zip")
+file_delete(c("master.zip"))
+results <- read.csv("mt_2_results.csv")
+files <- dir_ls("2018-live-poll-results-master/data")
+x <- map_dfr(files, read_csv, .id = "source") 
+```
+
+```{r}
+# read in all data to be used in shiny app
+# adding state variable 
+x <- x %>% 
+  mutate(state = case_when(str_detect(source, "az") ~ "AZ", 
+                           str_detect(source, "ca") ~ "CA", 
+                           str_detect(source, "co") ~ "CO", 
+                           str_detect(source, "fl") ~ "FL", 
+                           str_detect(source, "ga") ~ "GA", 
+                           str_detect(source, "ia") ~ "IA", 
+                           str_detect(source, "il") ~ "IL", 
+                           str_detect(source, "ks") ~ "KS", 
+                           str_detect(source, "ky") ~ "KY", 
+                           str_detect(source, "me") ~ "ME", 
+                           str_detect(source, "mi") ~ "MI", 
+                           str_detect(source, "mn") ~ "MN", 
+                           str_detect(source, "nc") ~ "NC", 
+                           str_detect(source, "ne") ~ "NE", 
+                           str_detect(source, "nj") ~ "NJ", 
+                           str_detect(source, "nm") ~ "NM", 
+                           str_detect(source, "nv") ~ "NV", 
+                           str_detect(source, "ny") ~ "NY", 
+                           str_detect(source, "oh") ~ "OH", 
+                           str_detect(source, "pa") ~ "PA", 
+                           str_detect(source, "tn") ~ "TN",
+                           str_detect(source, "tx") ~ "TX", 
+                           str_detect(source, "ut") ~ "UT", 
+                           str_detect(source, "va") ~ "VA", 
+                           str_detect(source, "wa") ~ "WA",
+                           str_detect(source, "wi") ~ "WI", 
+                           str_detect(source, "wv") ~ "WV"))
+
+# adding district 
+x <- x %>%
+  mutate(district = str_sub(source, 53, 54))
+# make new state-district column
+x$state_district <- paste(x$state, x$district, sep="-")
+# reformat source column 
+x$source <- str_replace_all(x$source, "2018-live-poll-results-master/data/elections-poll-", "")
+x$source <- str_replace_all(x$source, ".csv", "")
+new_x <- x %>%
+  filter(source %in% c("az02-1", "az06-3", "ca10-3",
+                       "ca25-3", "ca39-3", "ca45-3", "ca48-3", "ca49-3",
+                       "co06-3", "fl15-3", "fl26-3", "fl27-3",
+                       "ga06-3", "ia01-3",
+                       "ia03-3", "ia04-3", "il06-3", "il12-3", "il13-3",
+                       "il14-3", "ks02-3", "ks03-3", "ky06-3", "me02-3",
+                       "mi08-3", "mi11-1", "mn02-1", "mn03-1", "mn08-3",
+                       "nc09-3", "nc13-1", "ne02-1", "nj03-3", "nj07-3",
+                       "nj11-3", "nm02-3", "ny01-1",
+                       "ny11-3", "ny19-3", "ny22-3", "ny27-3", "oh01-3",
+                       "pa01-3", "pa07-1", "pa08-3", "pa10-3", "pa16-1",
+                       "tx07-3", "tx23-3",
+                       "tx31-1", "tx32-3", "ut04-3",
+                       "va02-3", "va05-3", "va07-3", "va10-3", "wa03-3",
+                       "wa08-3", "wi01-1", "wv03-3"))
+# calculate final weights (based on state)
+advantage <- new_x %>%
+  group_by(state_district, source) %>%
+  mutate(all_weights = sum(final_weight)) %>%
+  group_by(state_district, response, source) %>%
+  mutate(weights = sum(final_weight)) %>%
+  select(state_district, state, weights, all_weights, response, district) %>%
+  distinct()
+
+adv1 <- advantage %>%
+  spread(response, weights)
+# calulcates rep advantage
+all_adv <- adv1 %>%
+  mutate(rep_adv_results = ((Rep - Dem) / all_weights), 
+         dem_adv_results = (Dem - Rep) / all_weights) %>%
+  adorn_pct_formatting(digits = 0)
+all_adv <- all_adv %>%
+  select(state_district, rep_adv_results, dem_adv_results, state, district)
+all_adv <- all_adv %>%
+  mutate(result = case_when(state_district %in% c("AZ-02", "AZ-06", "AZ-se", "CA-10",
+                       "CA-25", "CA-39", "CA-45", "CA-48", "CA-49",
+                       "CO-06", "FL-15", "FL-26", "FL-27",
+                       "FL-go", "FL-se", "GA-06", "IA-01",
+                       "IA-03", "IA-04", "IL-06", "IL-12", "IL-13",
+                       "IL-14", "KS-02", "KS-03", "KY-06", "ME-02",
+                       "MI-08", "MI-11", "MN-02", "MN-03", "MN-08",
+                       "NC-09", "NC-13", "NE-02", "NJ-03", "NJ-07",
+                       "NJ-11", "NM-02", "NV-se", "NY-01",
+                       "NY-11", "NY-19", "NY-22", "NY-27", "OH-01",
+                       "PA-01", "PA-07", "PA-08", "PA-10", "PA-16",
+                       "TN-se", "TX-07", "TX-23",
+                       "TX-31", "TX-32", "TX-se", "UT-04",
+                       "VA-02", "VA-05", "VA-07", "VA-10", "WA-03",
+                       "WA-08", "WI-01", "WV-03") ~ "Upshot Results"))
+
+write_rds(all_adv, "ps_7/upshot.rds")
+# calculate final weights (based on educ)
+advantage_educ <- new_x %>%
+  group_by(state_district, source) %>%
+  mutate(all_weights = sum(final_weight)) %>%
+  group_by(state_district, educ, response, source) %>%
+  mutate(weights = sum(final_weight)) %>%
+  select(state_district, state, weights, all_weights, educ, response) %>%
+  distinct()
+
+adv2 <- advantage_educ %>%
+  spread(response, weights)
+# calulcates rep advantage
+all_adv_educ <- adv2 %>%
+  mutate(rep_adv_results = ((Rep - Dem) / all_weights), 
+         dem_adv_results = (Dem - Rep) / all_weights) %>%
+  adorn_pct_formatting(digits = 0)
+
+all_adv_educ <- all_adv_educ %>%
+  filter(educ != "[DO NOT READ] Don't know/Refused", 
+         educ != "[DO NOT READ] Refused")
+
+write_rds(all_adv_educ, "ps_7/upshot_educ.rds")
+
+# calculate final weights (based on educ)
+advantage_race <- new_x %>%
+  group_by(state_district, source) %>%
+  mutate(all_weights = sum(final_weight)) %>%
+  group_by(state_district, race_eth, response, source) %>%
+  mutate(weights = sum(final_weight)) %>%
+  select(state_district, state, weights,
+         all_weights, race_eth, response) %>%
+  distinct()
+
+adv3 <- advantage_race %>%
+  spread(response, weights)
+# calulcates rep advantage
+all_adv_race <- adv3 %>%
+  mutate(rep_adv_results = ((Rep - Dem) / all_weights), 
+         dem_adv_results = (Dem - Rep) / all_weights) %>%
+  adorn_pct_formatting(digits = 0)
+
+all_adv_race <- all_adv_race %>%
+  filter(race_eth != "[DO NOT READ] Don't know/Refused", 
+         race_eth != "[DO NOT READ] Refused", 
+         rep_adv_results != "-", 
+         dem_adv_results != "-")
+
+write_rds(all_adv_race, "ps_7/upshot_race.rds")
+
+# remove , from vote format in actual data
+y <- results$dem_votes
+results$dem_votes <- as.numeric(gsub(",", "", y))
+z <- results$rep_votes
+results$rep_votes <- as.numeric(gsub(",", "", z))
+e <- results$other_votes 
+results$other_votes <- as.numeric(gsub(",", "", e))
+# create state_district column
+results$state_district <- paste(results$state, results$district, sep="-")
+# calculate rep advantage from real election
+results <- results %>%
+  mutate(rep_adv_results = (rep_votes - dem_votes) / 
+           (dem_votes + rep_votes + other_votes), 
+         dem_adv_results = (dem_votes - rep_votes) / 
+           (dem_votes + rep_votes + other_votes)) %>%
+  adorn_pct_formatting(digits = 0)
+results <- results %>%
+  filter(state_district %in% c("AZ-02", "AZ-06", "CA-10",
+                       "CA-25", "CA-39", "CA-45", "CA-48", "CA-49",
+                       "CO-06", "FL-15", "FL-26", "FL-27",
+                       "GA-06", "IA-01",
+                       "IA-03", "IA-04", "IL-06", "IL-12", "IL-13",
+                       "IL-14", "KS-02", "KS-03", "KY-06", "ME-02",
+                       "MI-08", "MI-11", "MN-02", "MN-03", "MN-08",
+                       "NC-09", "NC-13", "NE-02", "NJ-03", "NJ-07",
+                       "NJ-11", "NM-02", "NY-01",
+                       "NY-11", "NY-19", "NY-22", "NY-27", "OH-01",
+                       "PA-01", "PA-07", "PA-08", "PA-10", "PA-16",
+                       "TX-07", "TX-23",
+                       "TX-31", "TX-32", "UT-04",
+                       "VA-02", "VA-05", "VA-07", "VA-10", "WA-03",
+                       "WA-08", "WI-01", "WV-03")) %>%
+  select(state_district, rep_adv_results, dem_adv_results, state, district)
+
+results <- results %>%
+  mutate(result = case_when(state_district %in% c("AZ-02", "AZ-06", "CA-10",
+                       "CA-25", "CA-39", "CA-45", "CA-48", "CA-49",
+                       "CO-06", "FL-15", "FL-26", "FL-27",
+                       "GA-06", "IA-01",
+                       "IA-03", "IA-04", "IL-06", "IL-12", "IL-13",
+                       "IL-14", "KS-02", "KS-03", "KY-06", "ME-02",
+                       "MI-08", "MI-11", "MN-02", "MN-03", "MN-08",
+                       "NC-09", "NC-13", "NE-02", "NJ-03", "NJ-07",
+                       "NJ-11", "NM-02", "NY-01",
+                       "NY-11", "NY-19", "NY-22", "NY-27", "OH-01",
+                       "PA-01", "PA-07", "PA-08", "PA-10", "PA-16",
+                       "TX-07", "TX-23",
+                       "TX-31", "TX-32", "UT-04",
+                       "VA-02", "VA-05", "VA-07", "VA-10", "WA-03",
+                       "WA-08", "WI-01", "WV-03") ~ "Actual Results"))
+
+write_rds(results, "ps_7/actual_results.rds")
+```
+
+
