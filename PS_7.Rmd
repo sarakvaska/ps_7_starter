@@ -81,94 +81,114 @@ new_x <- x %>%
                        "tx31-1", "tx32-3", "ut04-3",
                        "va02-3", "va05-3", "va07-3", "va10-3", "wa03-3",
                        "wa08-3", "wi01-1", "wv03-3"))
-# calculate final weights (based on state)
+# calculate weights and percent of people in age group (based on age)
+advantage_age <- new_x %>%
+  group_by(state_district, source) %>%
+  mutate(all_weights = sum(final_weight)) %>%
+  group_by(state_district, response, ager, source) %>%
+  mutate(weights = sum(final_weight)) %>%
+  select(state_district, state, weights, all_weights, response, district, ager) %>%
+  distinct()
+
+adv2 <- advantage_age %>%
+  spread(response, weights) %>%
+  group_by(ager)
+# calulcates rep advantage
+age_adv <- adv2 %>%
+  group_by(state_district, ager) %>%
+  mutate(rep_adv_results = 
+           round((Rep - Dem) / all_weights * 100, digits = 2), 
+         dem_adv_results = 
+           round((Dem - Rep) / all_weights * 100, digits = 2))
+new_x <- new_x %>%
+  filter(ager != "[DO NOT READ] Don't know/Refused", 
+         ager != "[DO NOT READ] Refused")
+age_percent <- new_x %>%
+  group_by(ager, state_district) %>%
+  count(ager) %>%
+  group_by(state_district) %>%
+  mutate(age_percentage = round(n / sum(n) * 100, digits = 2))
+
+write_rds(age_percent, "ps_7/upshot_age_percent.rds")
+write_rds(age_adv, "ps_7/upshot_age_adv.rds")
+
+# calculate weights and percent of people based on education responses
+advantage_educ <- new_x %>%
+  group_by(state_district, source) %>%
+  mutate(all_weights = sum(final_weight)) %>%
+  group_by(state_district, response, educ, source) %>%
+  mutate(weights = sum(final_weight)) %>%
+  select(state_district, state, weights, all_weights, response, district, educ) %>%
+  distinct()
+
+adv3 <- advantage_educ %>%
+  spread(response, weights) %>%
+  group_by(educ)
+# calulcates advantage
+educ_adv <- adv3 %>%
+  group_by(state_district, educ) %>%
+  mutate(rep_adv_results = 
+           round((Rep - Dem) / all_weights * 100, digits = 2), 
+         dem_adv_results = 
+           round((Dem - Rep) / all_weights * 100, digits = 2))
+new_x <- new_x %>%
+  filter(educ != "[DO NOT READ] Don't know/Refused", 
+         educ != "[DO NOT READ] Refused")
+educ_percent <- new_x %>%
+  group_by(educ, state_district) %>%
+  count(educ) %>%
+  group_by(state_district) %>%
+  mutate(educ_percentage = round(n / sum(n) * 100, digits = 2))
+
+write_rds(educ_percent, "ps_7/upshot_educ_percent.rds")
+write_rds(educ_adv, "ps_7/upshot_educ_adv.rds")
+
+# calculate weights and percent of people based on race responses
+advantage_race <- new_x %>%
+  group_by(state_district, source) %>%
+  mutate(all_weights = sum(final_weight)) %>%
+  group_by(state_district, response, race_eth, source) %>%
+  mutate(weights = sum(final_weight)) %>%
+  select(state_district, state, weights, all_weights, response, district, race_eth) %>%
+  distinct()
+
+adv4 <- advantage_race %>%
+  spread(response, weights) %>%
+  group_by(race_eth)
+# calulcates advantage
+race_adv <- adv4 %>%
+  group_by(state_district, race_eth) %>%
+  mutate(rep_adv_results = 
+           round((Rep - Dem) / all_weights * 100, digits = 2), 
+         dem_adv_results = 
+           round((Dem - Rep) / all_weights * 100, digits = 2))
+new_x <- new_x %>%
+  filter(race_eth != "[DO NOT READ] Don't know/Refused", 
+         race_eth != "[DO NOT READ] Refused")
+race_percent <- new_x %>%
+  group_by(race_eth, state_district) %>%
+  count(race_eth) %>%
+  group_by(state_district) %>%
+  mutate(race_percentage = round(n / sum(n) * 100, digits = 2))
+
+write_rds(race_percent, "ps_7/upshot_race_percent.rds")
+write_rds(race_adv, "ps_7/upshot_race_adv.rds")
+
+# advantage calculate final weights for all files in new_x
 advantage <- new_x %>%
   group_by(state_district, source) %>%
   mutate(all_weights = sum(final_weight)) %>%
   group_by(state_district, response, source) %>%
   mutate(weights = sum(final_weight)) %>%
-  select(state_district, state, weights, all_weights, response, district) %>%
+  select(state_district, weights, all_weights, state, district) %>%
   distinct()
 
 adv1 <- advantage %>%
   spread(response, weights)
 # calulcates rep advantage
-all_adv <- adv1 %>%
-  mutate(rep_adv_results = 
-           round((Rep - Dem) / all_weights, digits = 2) * 100, 
-         dem_adv_results = 
-           round((Dem - Rep) / all_weights, digits = 2) * 100)
-all_adv <- all_adv %>%
-  select(state_district, rep_adv_results, dem_adv_results, state, district)
-all_adv <- all_adv %>%
-  mutate(result = case_when(state_district %in% c("AZ-02", "AZ-06", "AZ-se", "CA-10",
-                       "CA-25", "CA-39", "CA-45", "CA-48", "CA-49",
-                       "CO-06", "FL-15", "FL-26", "FL-27",
-                       "FL-go", "FL-se", "GA-06", "IA-01",
-                       "IA-03", "IA-04", "IL-06", "IL-12", "IL-13",
-                       "IL-14", "KS-02", "KS-03", "KY-06", "ME-02",
-                       "MI-08", "MI-11", "MN-02", "MN-03", "MN-08",
-                       "NC-09", "NC-13", "NE-02", "NJ-03", "NJ-07",
-                       "NJ-11", "NM-02", "NV-se", "NY-01",
-                       "NY-11", "NY-19", "NY-22", "NY-27", "OH-01",
-                       "PA-01", "PA-07", "PA-08", "PA-10", "PA-16",
-                       "TN-se", "TX-07", "TX-23",
-                       "TX-31", "TX-32", "TX-se", "UT-04",
-                       "VA-02", "VA-05", "VA-07", "VA-10", "WA-03",
-                       "WA-08", "WI-01", "WV-03") ~ "Upshot Results"))
-
-write_rds(all_adv, "ps_7/upshot.rds")
-# calculate final weights (based on educ)
-advantage_educ <- new_x %>%
-  group_by(state_district, source) %>%
-  mutate(all_weights = sum(final_weight)) %>%
-  group_by(state_district, educ, response, source) %>%
-  mutate(weights = sum(final_weight)) %>%
-  select(state_district, state, weights, all_weights, educ, response) %>%
-  distinct()
-
-adv2 <- advantage_educ %>%
-  spread(response, weights)
-# calulcates rep advantage
-all_adv_educ <- adv2 %>%
-  mutate(rep_adv_results = 
-           round((Rep - Dem) / all_weights, digits = 2) * 100, 
-         dem_adv_results = 
-           round((Dem - Rep) / all_weights, digits = 2) * 100)
-
-all_adv_educ <- all_adv_educ %>%
-  filter(educ != "[DO NOT READ] Don't know/Refused", 
-         educ != "[DO NOT READ] Refused")
-
-write_rds(all_adv_educ, "ps_7/upshot_educ.rds")
-
-# calculate final weights (based on educ)
-advantage_race <- new_x %>%
-  group_by(state_district, source) %>%
-  mutate(all_weights = sum(final_weight)) %>%
-  group_by(state_district, race_eth, response, source) %>%
-  mutate(weights = sum(final_weight)) %>%
-  select(state_district, state, weights,
-         all_weights, race_eth, response) %>%
-  distinct()
-
-adv3 <- advantage_race %>%
-  spread(response, weights)
-# calulcates rep advantage
-all_adv_race <- adv3 %>%
-  mutate(rep_adv_results = 
-           round((Rep - Dem) / all_weights, digits = 2) * 100, 
-         dem_adv_results = 
-           round((Dem - Rep) / all_weights, digits = 2) * 100)
-
-all_adv_race <- all_adv_race %>%
-  filter(race_eth != "[DO NOT READ] Don't know/Refused", 
-         race_eth != "[DO NOT READ] Refused", 
-         rep_adv_results != "-", 
-         dem_adv_results != "-")
-
-write_rds(all_adv_race, "ps_7/upshot_race.rds")
-
+all_rep <- adv1 %>%
+  mutate(rep_adv_results = round((Rep - Dem) / all_weights * 100, digits = 2), 
+         dem_adv_results = round((Dem - Rep) / all_weights * 100, digits = 2))
 # remove , from vote format in actual data
 y <- results$dem_votes
 results$dem_votes <- as.numeric(gsub(",", "", y))
@@ -181,9 +201,10 @@ results$state_district <- paste(results$state, results$district, sep="-")
 # calculate rep advantage from real election
 results <- results %>%
   mutate(rep_adv_results = round((rep_votes - dem_votes) / 
-           (dem_votes + rep_votes + other_votes), digits = 2) * 100, 
+           (dem_votes + rep_votes + other_votes) * 100, digits = 2), 
          dem_adv_results = round((dem_votes - rep_votes) / 
-           (dem_votes + rep_votes + other_votes), digits = 2) * 100)
+           (dem_votes + rep_votes + other_votes) * 100, digits = 2))
+# filter out states which are in actual data and in upshot data
 results <- results %>%
   filter(state_district %in% c("AZ-02", "AZ-06", "CA-10",
                        "CA-25", "CA-39", "CA-45", "CA-48", "CA-49",
@@ -202,6 +223,7 @@ results <- results %>%
                        "WA-08", "WI-01", "WV-03")) %>%
   select(state_district, rep_adv_results, dem_adv_results, state, district)
 
+# write data to rds to use in shiny app
 results <- results %>%
   mutate(result = case_when(state_district %in% c("AZ-02", "AZ-06", "CA-10",
                        "CA-25", "CA-39", "CA-45", "CA-48", "CA-49",
@@ -218,29 +240,25 @@ results <- results %>%
                        "TX-31", "TX-32", "UT-04",
                        "VA-02", "VA-05", "VA-07", "VA-10", "WA-03",
                        "WA-08", "WI-01", "WV-03") ~ "Actual Results"))
+all_rep <- all_rep %>%
+  mutate(result = case_when(state_district %in% c("AZ-02", "AZ-06", "CA-10",
+                       "CA-25", "CA-39", "CA-45", "CA-48", "CA-49",
+                       "CO-06", "FL-15", "FL-26", "FL-27",
+                       "GA-06", "IA-01",
+                       "IA-03", "IA-04", "IL-06", "IL-12", "IL-13",
+                       "IL-14", "KS-02", "KS-03", "KY-06", "ME-02",
+                       "MI-08", "MI-11", "MN-02", "MN-03", "MN-08",
+                       "NC-09", "NC-13", "NE-02", "NJ-03", "NJ-07",
+                       "NJ-11", "NM-02", "NY-01",
+                       "NY-11", "NY-19", "NY-22", "NY-27", "OH-01",
+                       "PA-01", "PA-07", "PA-08", "PA-10", "PA-16",
+                       "TX-07", "TX-23",
+                       "TX-31", "TX-32", "UT-04",
+                       "VA-02", "VA-05", "VA-07", "VA-10", "WA-03",
+                       "WA-08", "WI-01", "WV-03") ~ "Upshot Results"))
 
-write_rds(results, "ps_7/actual_results.rds")
-
-# calculate final weights (based on age)
-advantage_age <- new_x %>%
-  group_by(state_district, source) %>%
-  mutate(all_weights = sum(final_weight)) %>%
-  group_by(state_district, ager, response, source) %>%
-  mutate(weights = sum(final_weight)) %>%
-  select(state_district, state, weights, all_weights, ager, response) %>%
-  distinct()
-
-adv4 <- advantage_age %>%
-  spread(response, weights)
-# calulcates rep advantage
-all_adv_age <- adv4 %>%
-  mutate(rep_adv_results = 
-           round((Rep - Dem) / all_weights, digits = 2) * 100, 
-         dem_adv_results = 
-           round((Dem - Rep) / all_weights, digits = 2) * 100)
-
-write_rds(all_adv_age, "ps_7/upshot_age.rds")
-
+write_rds(all_rep, "ps_7/upshot.rds")
+write_rds(results, "ps_7/actual.rds")
 ```
 
 
