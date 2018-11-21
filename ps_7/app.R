@@ -12,6 +12,7 @@ library(shiny)
 upshot_results <- read_rds("upshot.rds")
 upshot_educ <- read_rds("upshot_educ.rds")
 upshot_race <- read_rds("upshot_race.rds")
+upshot_age <- read_rds("upshot_age.rds")
 actual_results <- read_rds("actual_results.rds")
 together <- bind_rows(upshot_results, actual_results)
 # Define UI for application that draws a histogram
@@ -21,8 +22,8 @@ ui <- fluidPage(
                choices = c("Upshot Predictions by State", 
                            "Upshot Predictions by Race",
                            "Upshot Predictions by Education",
-                           "Upshot vs Actual Results", 
-                           "Upshot vs Actual Results Percent Error")),
+                           "Upshot Predictions by Age",
+                           "Upshot vs Actual Results")),
    # Application title
    titlePanel("Predicted Advantages"),
    
@@ -43,8 +44,9 @@ server <- function(input, output, session) {
     if(identical(input$dataframe, "Upshot Predictions by State")) {
       ggplotly(ggplot(data = upshot_results, 
                       aes_string(y = "state", x = input$x, color = "state_district")) + 
-                 geom_point() + theme(text = element_text(size = 8), 
-                                      axis.text.x = element_text(angle=50, hjust=1)) + 
+                 geom_point() + geom_jitter() + theme(text = element_text(size = 8), 
+                                      axis.text.x = element_text(angle=50, hjust=1)) +
+                 geom_smooth(aes( group = 1 ), se = FALSE) +
                  labs(x = names(options[which(options == input$x)]), 
                       y = "State", 
                       color = "state-district"))
@@ -53,7 +55,7 @@ server <- function(input, output, session) {
       ggplotly(ggplot(data = upshot_educ, 
                       aes_string(y = "educ", x = input$x, color = "state_district")) + 
                  geom_point() + theme(text = element_text(size = 8), 
-                                      axis.text.x = element_text(angle=50, hjust=1)) + 
+                                      axis.text.x = element_text(angle=50, hjust=1)) +
                  labs(x = names(options[which(options == input$x)]), 
                       y = "Education", 
                       color = "state-district"))
@@ -66,6 +68,15 @@ server <- function(input, output, session) {
                  labs(x = names(options[which(options == input$x)]), 
                       y = "Race", 
                       color = "state-district"))
+    }
+    else if(identical(input$dataframe, "Upshot Predictions by Age")) {
+      ggplotly(ggplot(data = upshot_age, 
+                      aes_string(y = "ager", x = input$x, color = "state_district")) + 
+               geom_point() + theme(text = element_text(size = 8), 
+                                    axis.text.x = element_text(angle=50, hjust=1)) + 
+               labs(x = names(options[which(options == input$x)]), 
+                    y = "Age", 
+                    color = "state-district"))
     }
     else if(identical(input$dataframe, "Upshot vs Actual Results")) {
       ggplotly(ggplot(data = together, 

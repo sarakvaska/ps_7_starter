@@ -94,9 +94,10 @@ adv1 <- advantage %>%
   spread(response, weights)
 # calulcates rep advantage
 all_adv <- adv1 %>%
-  mutate(rep_adv_results = ((Rep - Dem) / all_weights), 
-         dem_adv_results = (Dem - Rep) / all_weights) %>%
-  adorn_pct_formatting(digits = 0)
+  mutate(rep_adv_results = 
+           round((Rep - Dem) / all_weights, digits = 2) * 100, 
+         dem_adv_results = 
+           round((Dem - Rep) / all_weights, digits = 2) * 100)
 all_adv <- all_adv %>%
   select(state_district, rep_adv_results, dem_adv_results, state, district)
 all_adv <- all_adv %>%
@@ -130,9 +131,10 @@ adv2 <- advantage_educ %>%
   spread(response, weights)
 # calulcates rep advantage
 all_adv_educ <- adv2 %>%
-  mutate(rep_adv_results = ((Rep - Dem) / all_weights), 
-         dem_adv_results = (Dem - Rep) / all_weights) %>%
-  adorn_pct_formatting(digits = 0)
+  mutate(rep_adv_results = 
+           round((Rep - Dem) / all_weights, digits = 2) * 100, 
+         dem_adv_results = 
+           round((Dem - Rep) / all_weights, digits = 2) * 100)
 
 all_adv_educ <- all_adv_educ %>%
   filter(educ != "[DO NOT READ] Don't know/Refused", 
@@ -154,9 +156,10 @@ adv3 <- advantage_race %>%
   spread(response, weights)
 # calulcates rep advantage
 all_adv_race <- adv3 %>%
-  mutate(rep_adv_results = ((Rep - Dem) / all_weights), 
-         dem_adv_results = (Dem - Rep) / all_weights) %>%
-  adorn_pct_formatting(digits = 0)
+  mutate(rep_adv_results = 
+           round((Rep - Dem) / all_weights, digits = 2) * 100, 
+         dem_adv_results = 
+           round((Dem - Rep) / all_weights, digits = 2) * 100)
 
 all_adv_race <- all_adv_race %>%
   filter(race_eth != "[DO NOT READ] Don't know/Refused", 
@@ -177,11 +180,10 @@ results$other_votes <- as.numeric(gsub(",", "", e))
 results$state_district <- paste(results$state, results$district, sep="-")
 # calculate rep advantage from real election
 results <- results %>%
-  mutate(rep_adv_results = (rep_votes - dem_votes) / 
-           (dem_votes + rep_votes + other_votes), 
-         dem_adv_results = (dem_votes - rep_votes) / 
-           (dem_votes + rep_votes + other_votes)) %>%
-  adorn_pct_formatting(digits = 0)
+  mutate(rep_adv_results = round((rep_votes - dem_votes) / 
+           (dem_votes + rep_votes + other_votes), digits = 2) * 100, 
+         dem_adv_results = round((dem_votes - rep_votes) / 
+           (dem_votes + rep_votes + other_votes), digits = 2) * 100)
 results <- results %>%
   filter(state_district %in% c("AZ-02", "AZ-06", "CA-10",
                        "CA-25", "CA-39", "CA-45", "CA-48", "CA-49",
@@ -218,6 +220,27 @@ results <- results %>%
                        "WA-08", "WI-01", "WV-03") ~ "Actual Results"))
 
 write_rds(results, "ps_7/actual_results.rds")
+
+# calculate final weights (based on age)
+advantage_age <- new_x %>%
+  group_by(state_district, source) %>%
+  mutate(all_weights = sum(final_weight)) %>%
+  group_by(state_district, ager, response, source) %>%
+  mutate(weights = sum(final_weight)) %>%
+  select(state_district, state, weights, all_weights, ager, response) %>%
+  distinct()
+
+adv4 <- advantage_age %>%
+  spread(response, weights)
+# calulcates rep advantage
+all_adv_age <- adv4 %>%
+  mutate(rep_adv_results = 
+           round((Rep - Dem) / all_weights, digits = 2) * 100, 
+         dem_adv_results = 
+           round((Dem - Rep) / all_weights, digits = 2) * 100)
+
+write_rds(all_adv_age, "ps_7/upshot_age.rds")
+
 ```
 
 
